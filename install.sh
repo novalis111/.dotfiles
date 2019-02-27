@@ -11,7 +11,7 @@ function install() {
     else:
         echo "eval (direnv hook fish)" >> ${FC}
     fi
-    grep -q '.dotfiles\/.my_bash' || echo "if [ -f ~/.dotfiles/.my_bash ]; then . ~/.dotfiles/.my_bash; fi" >> ~/.bashrc
+    grep -q '.dotfiles\/.my_bash' ~/.bashrc || echo "if [ -f ~/.dotfiles/.my_bash ]; then . ~/.dotfiles/.my_bash; fi" >> ~/.bashrc
     echo "done"
 }
 
