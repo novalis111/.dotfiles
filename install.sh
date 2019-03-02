@@ -23,6 +23,7 @@ function install() {
             echo "set -x EDITOR $EDITOR" >> ${FC}
         fi
     fi
+    grep -q '.dotfiles\/.my_bash' ~/.bashrc || echo "if [ -f ~/.dotfiles/.my_bash ]; then . ~/.dotfiles/.my_bash; fi" >> ~/.bashrc
     echo "done"
 }
 
