@@ -11,3 +11,10 @@ tm ()
 		done
 	fi
 }
+
+if [ -f ~/.dotfiles/.my_aliases ]; then
+	source ~/.dotfiles/.my_aliases
+fi
+
+# colored prompt
+export PS1="\[\033[38;5;248m\]\u\[$(tput sgr0)\]\[\033[38;5;253m\]@\[$(tput sgr0)\]\[\033[38;5;113m\]\H\[$(tput sgr0)\]\[\033[38;5;15m\]:\[$(tput sgr0)\]\[\033[38;5;111m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\[$(tput sgr0)\]\[\033[38;5;253m\]\\$\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]"

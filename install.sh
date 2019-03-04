@@ -7,6 +7,7 @@ function install() {
 	cp .tmux.conf ${HOME}/
     cp .dotenvrc ${HOME}/.config/direnv/direnvrc
     FC="${HOME}/.config/fish/config.fish"
+    BC="${HOME}/.dotfiles/.my_bash"
     if [ -f /usr/bin/vim ]; then
         EDITOR="/usr/bin/vim"
     fi
@@ -16,6 +17,8 @@ function install() {
         if [ -n ${EDITOR} ]; then
             grep -q 'EDITOR' ${FC} || echo "set -x EDITOR $EDITOR" >> ${FC}
         fi
+      # Add aliases to fish
+      grep -q 'my_aliases' ${FC} || cat .my_aliases >> ${FC}
     else
         echo "eval (direnv hook fish)" >> ${FC}
         echo "alias ll 'ls -lah'" >> ${FC}
@@ -23,7 +26,7 @@ function install() {
             echo "set -x EDITOR $EDITOR" >> ${FC}
         fi
     fi
-    grep -q '.dotfiles\/.my_bash' ~/.bashrc || echo "if [ -f ~/.dotfiles/.my_bash ]; then . ~/.dotfiles/.my_bash; fi" >> ~/.bashrc
+    grep -q '.dotfiles\/.my_bash' ${HOME}/.bashrc || echo "if [ -f ~/.dotfiles/.my_bash ]; then . ~/.dotfiles/.my_bash; fi" >> ${HOME}/.bashrc
     echo "done"
 }
 
