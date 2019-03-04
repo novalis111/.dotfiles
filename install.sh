@@ -24,7 +24,7 @@ function install() {
       # Add aliases to fish
       grep -q 'my_aliases' ${FC} || cat .my_aliases >> ${FC}
     else
-	echo "Notice: No fish shell config found, install fish and create ${FC} to use it"
+	echo "Notice: fish shell not installed, skipping config"
     fi
     grep -q '.dotfiles\/.my_bash' ${HOME}/.bashrc || echo "if [ -f ~/.dotfiles/.my_bash ]; then . ~/.dotfiles/.my_bash; fi" >> ${HOME}/.bashrc
     echo "done"
