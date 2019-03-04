@@ -26,8 +26,8 @@ function install() {
     else
 	     echo "Notice: fish shell not installed, skipping config"
     fi
-    grep -q '.dotfiles\/.my_bash' ${HOME}/.bashrc || echo "if [ -f ~/.dotfiles/.my_bash ]; then . ~/.dotfiles/.my_bash; fi" >> ${HOME}/.bashrc
-    wget https://raw.githubusercontent.com/amix/vimrc/master/vimrcs/basic.vim -O ~/.vimrc
+    grep -q '.dotfiles\/.my_bash' ${HOME}/.bashrc || echo "[ -r ~/.dotfiles/.my_bash ] && . ~/.dotfiles/.my_bash" >> ${HOME}/.bashrc
+    wget -q https://raw.githubusercontent.com/amix/vimrc/master/vimrcs/basic.vim -O ~/.vimrc
     echo "Done :)"
 }
 
