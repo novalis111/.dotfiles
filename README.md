@@ -6,6 +6,7 @@ git clone https://github.com/novalis111/.dotfiles.git ~/.dotfiles && cd ~/.dotfi
 ```
 
 ## Links
+* [vimrc](https://github.com/amix/vimrc)
 * [bashrc gen](http://bashrcgenerator.com/)
 * [dotvim2](https://github.com/vitaly/dotvim2)
 * [fzf](https://github.com/junegunn/fzf)
