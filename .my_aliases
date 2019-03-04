@@ -6,3 +6,4 @@ alias ll="ls -lAGh"
 ## git
 alias glog="git log --pretty=tformat:'%h %Cblue%cr%Creset %cn %Cgreen%s%Creset'"
 alias gst="git status"
+alias updot="cd ~/.dotfiles && git pull && bash install.sh --force && cd -"
