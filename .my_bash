@@ -12,9 +12,17 @@ tm ()
 	fi
 }
 
-if [ -f ~/.dotfiles/.my_aliases ]; then
-	source ~/.dotfiles/.my_aliases
-fi
+# conda
+[ -r ${HOME}/miniconda3/etc/profile.d/conda.sh ] && . ${HOME}/miniconda3/etc/profile.d/conda.sh
+
+# aliases
+[ -r ${HOME}/.dotfiles/.my_aliases ] && . ${HOME}/.dotfiles/.my_aliases
+
+# direnv
+command -v direnv &>/dev/null && eval "$(direnv hook bash)"
+
+# own bins
+[ -d ${HOME}/bin ] && export PATH="${HOME}/bin:$PATH"
 
 # colored prompt
 export PS1="\[\033[38;5;248m\]\u\[$(tput sgr0)\]\[\033[38;5;253m\]@\[$(tput sgr0)\]\[\033[38;5;113m\]\H\[$(tput sgr0)\]\[\033[38;5;15m\]:\[$(tput sgr0)\]\[\033[38;5;111m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n\[$(tput sgr0)\]\[\033[38;5;253m\]\\$\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]"
