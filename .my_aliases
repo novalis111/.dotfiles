@@ -1,0 +1,8 @@
+# my_aliases
+## global
+alias hgr="history | grep -i "
+alias l="ls -hG"
+alias ll="ls -lAGh"
+## git
+alias glog="git log --pretty=tformat:'%h %Cblue%cr%Creset %cn %Cgreen%s%Creset'"
+alias gst="git status"
