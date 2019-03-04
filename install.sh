@@ -3,11 +3,16 @@
 cd "$(dirname "${BASH_SOURCE}")";
 
 function install() {
-    echo "Syncing dotfiles to home directory..."
-	cp .tmux.conf ${HOME}/
-    cp .dotenvrc ${HOME}/.config/direnv/direnvrc
+    DC="${HOME}/.config/direnv/direnvrc"
     FC="${HOME}/.config/fish/config.fish"
     BC="${HOME}/.dotfiles/.my_bash"
+    echo "Syncing dotfiles to home directory..."
+    cp .tmux.conf ${HOME}/
+    if [ -f ${DC} ]; then
+        cp .dotenvrc ${HOME}/.config/direnv/direnvrc
+    else
+        echo "Notice: direnv not installed, skipping config"
+    fi
     if [ -f /usr/bin/vim ]; then
         EDITOR="/usr/bin/vim"
     fi
@@ -19,7 +24,7 @@ function install() {
       # Add aliases to fish
       grep -q 'my_aliases' ${FC} || cat .my_aliases >> ${FC}
     else
-	echo "No fish shell config found, please install + create ${FC} to use it"
+	echo "Notice: No fish shell config found, install fish and create ${FC} to use it"
     fi
     grep -q '.dotfiles\/.my_bash' ${HOME}/.bashrc || echo "if [ -f ~/.dotfiles/.my_bash ]; then . ~/.dotfiles/.my_bash; fi" >> ${HOME}/.bashrc
     echo "done"
