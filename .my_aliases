@@ -9,7 +9,7 @@ alias glog="git log --pretty=tformat:'%h %Cblue%cr%Creset %cn %Cgreen%s%Creset'"
 alias gst="git status"
 ## misc
 alias updot="cd ~/.dotfiles && git pull && bash install.sh --force && cd -"
-alias instess="sudo apt -y install tmux git vim rsync bc"
+alias instess="sudo apt install -y tmux git vim rsync bc"
 alias cd..="cd .."
 alias ..="cd .."
 alias ...="cd ../../"
