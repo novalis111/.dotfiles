@@ -3,6 +3,7 @@
 cd "$(dirname "${BASH_SOURCE}")";
 
 function install() {
+    command -v 'bc' &>/dev/null || echo "You need to install 'bc' package for tmux version check"
     DC="${HOME}/.config/direnv/direnvrc"
     FC="${HOME}/.config/fish/config.fish"
     BC="${HOME}/.dotfiles/.my_bash"
@@ -13,6 +14,7 @@ function install() {
     else
         echo "Notice: direnv not installed, skipping config"
     fi
+    # fish shell
     if [ -f /usr/bin/vim ]; then
         EDITOR="/usr/bin/vim"
     fi
@@ -21,12 +23,13 @@ function install() {
         if [ -n ${EDITOR} ]; then
             grep -q 'EDITOR' ${FC} || echo "set -x EDITOR $EDITOR" >> ${FC}
         fi
-      # Add aliases to fish
-      grep -q 'my_aliases' ${FC} || cat .my_aliases >> ${FC}
+        grep -q 'my_aliases' ${FC} || cat .my_aliases >> ${FC}
     else
 	     echo "Notice: fish shell not installed, skipping config"
     fi
+    # bash shell
     grep -q '.dotfiles\/.my_bash' ${HOME}/.bashrc || echo "[ -r ~/.dotfiles/.my_bash ] && . ~/.dotfiles/.my_bash" >> ${HOME}/.bashrc
+    # vim
     wget -q https://raw.githubusercontent.com/amix/vimrc/master/vimrcs/basic.vim -O ~/.vimrc
     echo "Done :)"
 }
