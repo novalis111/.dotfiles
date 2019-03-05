@@ -9,7 +9,8 @@ tm ()
 # Add + commit + push git in current dir, takes commit msg as param
 gdrop ()
 {
-    git add . && git commit -a -m"$1" && git push
+    [ -z "$1" ] && MSG="auto commit" || MSG="$1"
+    git add . && git commit -a -m"$MSG" && git push
 }
 
 # conda
