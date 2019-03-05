@@ -10,3 +10,9 @@ alias gst="git status"
 ## misc
 alias updot="cd ~/.dotfiles && git pull && bash install.sh --force && cd -"
 alias instess="sudo apt -y install tmux git vim rsync bc"
+alias cd..="cd .."
+alias ..="cd .."
+alias ...="cd ../../"
+alias .3="cd ../../../"
+alias .4="cd ../../../../"
+alias mount='mount |column -t'
