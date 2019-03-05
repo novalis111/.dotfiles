@@ -17,5 +17,5 @@ alias .3="cd ../../../"
 alias .4="cd ../../../../"
 alias mount='mount |column -t'
 alias ports='netstat -tulanp'
-alias updeb='sudo apt-get update && sudo apt-get upgrade'
+alias updeb='sudo apt-get update && sudo apt-get upgrade && sudo apt-get autoremove && sudo apt-get autoclean'
 alias su='sudo -i'
