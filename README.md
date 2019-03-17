@@ -2,6 +2,7 @@
 
 ## Install
 ```bash
+apt-get install git tmux neovim
 git clone https://github.com/novalis111/.dotfiles.git ~/.dotfiles && cd ~/.dotfiles && bash install.sh && cd -
 ```
 
