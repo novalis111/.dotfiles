@@ -2,7 +2,10 @@
 
 ## Install
 ```bash
-git clone https://github.com/novalis111/.dotfiles.git ~/.dotfiles && cd ~/.dotfiles && bash install.sh && cd -
+sudo apt-get update && \
+sudo apt-get install git tmux neovim rsync psmisc htop && \
+git clone https://github.com/novalis111/.dotfiles.git ~/.dotfiles && \ 
+cd ~/.dotfiles && bash install.sh && cd -
 ```
 
 ## Links
