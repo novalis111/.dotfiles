@@ -4,8 +4,8 @@
 ```bash
 sudo apt-get update && \
 sudo apt-get install git tmux neovim rsync psmisc htop bc && \
-git clone https://github.com/novalis111/.dotfiles.git ~/.dotfiles && \ 
-cd ~/.dotfiles && bash install.sh && cd -
+git clone https://github.com/novalis111/.dotfiles.git ~/.dotfiles && \
+bash ~/.dotfiles/install.sh
 ```
 
 ## Links
