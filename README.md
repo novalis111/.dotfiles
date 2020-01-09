@@ -3,7 +3,7 @@
 ## Install
 ```bash
 sudo apt-get update && \
-sudo apt-get install git tmux neovim rsync psmisc htop bc && \
+sudo apt-get install git tmux neovim rsync psmisc htop bc bash-completion && \
 git clone https://github.com/novalis111/.dotfiles.git ~/.dotfiles && \
 bash ~/.dotfiles/install.sh
 ```
