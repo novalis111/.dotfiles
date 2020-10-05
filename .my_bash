@@ -2,7 +2,7 @@
 tm ()
 {
 	if command -v tmux >/dev/null 2>&1; then
-        tmux attach || tmux new
+        tmux attach -d || tmux new
 	fi
 }
 

@@ -10,14 +10,14 @@ alias gst="git status"
 ## php debug inside local docker
 alias xphp="php -dxdebug.idekey=phpstorm -dxdebug.remote_host=docker.host.internal"
 ## misc
-alias updot="cd ~/.dotfiles && git pull && bash install.sh --force && cd -"
-alias instess="sudo apt install -y tmux git vim rsync bc"
+alias updot="cd ~/.dotfiles && git pull && bash install.sh --force && cd -" # update dotfiles
+alias instess="sudo apt install -y tmux git vim rsync bc" # install essentials
 alias cd..="cd .."
 alias ..="cd .."
 alias ...="cd ../../"
 alias .3="cd ../../../"
 alias .4="cd ../../../../"
-alias mount='mount |column -t'
-alias ports='netstat -tulanp'
-alias updeb='sudo apt-get update && sudo apt-get upgrade && sudo apt-get autoremove && sudo apt-get autoclean'
+alias mount='mount |column -t' # show readable mounts
+alias ports='netstat -tulanp' # show open ports
+alias updeb='sudo apt-get update && sudo apt-get upgrade && sudo apt-get autoremove && sudo apt-get autoclean' # update debian system
 alias su='sudo -i'
