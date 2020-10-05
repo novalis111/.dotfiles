@@ -8,7 +8,7 @@ function install() {
     FC="${HOME}/.config/fish/config.fish"
     BC="${HOME}/.dotfiles/.my_bash"
     echo "Syncing dotfiles to home directory..."
-    cp .tmux.conf ${HOME}/
+    cp .tmux.conf ${HOME}
     if [ -d ${HOME}/.config/direnv ]; then
         cp .dotenvrc ${HOME}/.config/direnv/direnvrc
     else
