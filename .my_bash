@@ -33,4 +33,7 @@ command -v direnv &>/dev/null && eval "$(direnv hook bash)"
 if [ -n "$SSH_CLIENT" ]; then
     sshtxt="[ssh] "
 fi
+# Format prompt
 export PS1="\[\033[38;5;248m\]\u\[$(tput sgr0)\]\[\033[38;5;253m\]@\[$(tput sgr0)\]\[\033[38;5;113m\]\H\[$(tput sgr0)\]\[\033[38;5;15m\]:\[$(tput sgr0)\]\[\033[38;5;111m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n${sshtxt}\[$(tput sgr0)\]\[\033[38;5;253m\]\\$\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]"
+# Remove duplicates from bash history
+export HISTCONTROL=ignoreboth:erasedups
