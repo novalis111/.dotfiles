@@ -9,8 +9,9 @@ function install() {
     BC="${HOME}/.dotfiles/.my_bash"
     echo "Syncing dotfiles to home directory..."
     cp .tmux.conf ${HOME}
-    if [ -d ${HOME}/.config/direnv ]; then
-        cp .dotenvrc ${HOME}/.config/direnv/direnvrc
+    if command -v direnv &> /dev/null; then
+    	mkdir -p ${HOME}/.config/direnv
+        cp .direnvrc ${HOME}/.config/direnv/direnvrc
     else
         echo "Notice: direnv not installed, skipping config"
     fi
