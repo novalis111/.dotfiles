@@ -1,9 +1,15 @@
 # Resume or start tmux session
 tm ()
 {
+	[ -z "$1" ] && SESS="mytmux" || SESS="$1"
 	if command -v tmux >/dev/null 2>&1; then
-        tmux attach -d || tmux new
+		tmux attach -t $SESS || tmux new -s $SESS
 	fi
+}
+
+tmk ()
+{
+	tmux kill-server
 }
 
 # Add + commit + push git in current dir, takes commit msg as param
@@ -40,7 +46,9 @@ PS1='$(show_virtual_env)'$PS1
 if [ -n "$SSH_CLIENT" ]; then
     sshtxt="[ssh] "
 fi
+
 # Format prompt
 export PS1="\[\033[38;5;248m\]\u\[$(tput sgr0)\]\[\033[38;5;253m\]@\[$(tput sgr0)\]\[\033[38;5;113m\]\H\[$(tput sgr0)\]\[\033[38;5;15m\]:\[$(tput sgr0)\]\[\033[38;5;111m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n${sshtxt}\[$(tput sgr0)\]\[\033[38;5;253m\]\\$\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]"
+
 # Remove duplicates from bash history
 export HISTCONTROL=ignoreboth:erasedups
