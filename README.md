@@ -14,3 +14,4 @@ bash ~/.dotfiles/install.sh
 * [dotvim2](https://github.com/vitaly/dotvim2)
 * [fzf](https://github.com/junegunn/fzf)
 * [bash aliases](https://www.cyberciti.biz/tips/bash-aliases-mac-centos-linux-unix.html)
+* [tmux shortcuts](https://wiki.ubuntuusers.de/tmux/#Kurztasten)
