@@ -19,6 +19,25 @@ gdrop ()
     git add . && git commit -a -m"$MSG" && git push
 }
 
+# Add + commit + checkout master + merge + push + checkout develop
+gdep() {
+    local BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+    if [ "$BRANCH" != "develop" ]; then
+        echo "Error: Not on 'develop' branch! Aborting."
+        return 1
+    fi
+
+    local MSG=${1:-"auto commit"}
+
+    echo "On 'develop' branch. Proceeding..."
+    
+    git add . && git commit -a -m "$MSG"
+
+    # Wechsle zu master, merge develop, pushe, dann zurück zu develop
+    git checkout master && git merge develop && git push && git checkout develop
+}
+
 # conda
 [ -r ${HOME}/miniconda3/etc/profile.d/conda.sh ] && . ${HOME}/miniconda3/etc/profile.d/conda.sh
 
