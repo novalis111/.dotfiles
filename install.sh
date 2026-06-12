@@ -38,6 +38,20 @@ else
     echo "  ok   .bashrc-Hook"
 fi
 
+# ssh-config: battlecat-Block via Include einbinden. Include MUSS vor allen
+# Host-Bloecken stehen -> an den Kopf von ~/.ssh/config. Idempotent.
+# Privater Key ~/.ssh/iterp muss separat liegen (nicht im Repo).
+SSH_INC="Include ~/.dotfiles/ssh-config-battlecat"
+mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+touch "$HOME/.ssh/config" && chmod 600 "$HOME/.ssh/config"
+if ! grep -qF "$SSH_INC" "$HOME/.ssh/config" 2>/dev/null; then
+    printf '%s\n%s\n' "$SSH_INC" "$(cat "$HOME/.ssh/config")" > "$HOME/.ssh/config.tmp" \
+        && mv "$HOME/.ssh/config.tmp" "$HOME/.ssh/config" && chmod 600 "$HOME/.ssh/config"
+    echo "  ssh  ~/.ssh/config -> Include battlecat-Block (am Kopf)"
+else
+    echo "  ok   ssh-config Include"
+fi
+
 # Doctor: tmux-Version warnen (Config braucht >= 3.2)
 if command -v tmux >/dev/null 2>&1; then
     ver="$(tmux -V | grep -oE '[0-9]+\.[0-9]+' | head -1)"

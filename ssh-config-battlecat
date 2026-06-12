@@ -1,0 +1,35 @@
+# ════════════════════════════════════════════════════════════════════
+#  battlecat — Dev-Host (i7 / RTX3060 12GB / 32GB RAM)
+#  Auto-Pfad: zuhause -> LAN (fritz.box), unterwegs -> MyFRITZ! (Italien-tauglich).
+#  Du tippst IMMER nur 'ssh battlecat' (oder Alias 'bc' = mosh).
+#  Wird von install.sh idempotent in ~/.ssh/config eingeklinkt.
+#  Voraussetzung: privater Key ~/.ssh/iterp (NICHT im Repo — separat ablegen).
+# ════════════════════════════════════════════════════════════════════
+Host battlecat
+  User ingo
+  IdentityFile ~/.ssh/iterp
+  IdentitiesOnly yes
+  HostKeyAlias battlecat-os
+  Compression no
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%r@%h:%p
+  ControlPersist 600
+Match host battlecat exec "getent hosts battlecat.fritz.box >/dev/null 2>&1 || host -W1 battlecat.fritz.box >/dev/null 2>&1"
+  HostName battlecat.fritz.box
+Match host battlecat
+  HostName REDACTED.myfritz.net
+
+# LUKS-Remote-Unlock (initramfs-dropbear, Port 2222, eigener Host-Key)
+Host battlecat-unlock
+  Port 2222
+  User root
+  IdentityFile ~/.ssh/iterp
+  IdentitiesOnly yes
+  HostKeyAlias battlecat-initramfs
+  RequestTTY yes
+Match host battlecat-unlock exec "getent hosts battlecat.fritz.box >/dev/null 2>&1 || host -W1 battlecat.fritz.box >/dev/null 2>&1"
+  HostName battlecat.fritz.box
+Match host battlecat-unlock
+  HostName REDACTED.myfritz.net
