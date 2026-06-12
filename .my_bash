@@ -1,77 +1,54 @@
-# Resume or start tmux session
-tm ()
-{
-	[ -z "$1" ] && SESS="mytmux" || SESS="$1"
-	if command -v tmux >/dev/null 2>&1; then
-		tmux attach -t $SESS || tmux new -s $SESS
-	fi
+# ~/.dotfiles/.my_bash — bash-Funktionen, Prompt, PATH, Tool-Hooks
+# Wird von ~/.bashrc gesourct (eine geguardete Zeile, via install.sh).
+
+##### tmux: attach-or-new #####
+tm() {
+    local sess="${1:-mytmux}"
+    command -v tmux >/dev/null 2>&1 || return
+    tmux attach -t "$sess" 2>/dev/null || tmux new -s "$sess"
 }
 
-tmk ()
-{
-	tmux kill-server
+# tmux-Server killen — mit Nachfrage (24/7-Sessions sind eine Fusswaffe)
+tmk() {
+    read -rp "Wirklich ALLE tmux-Sessions killen? (y/N) " a
+    [[ "$a" =~ ^[Yy]$ ]] && tmux kill-server
 }
 
-# Add + commit + push git in current dir, takes commit msg as param
-gdrop ()
-{
-    [ -z "$1" ] && MSG="auto commit" || MSG="$1"
-    git add . && git commit -a -m"$MSG" && git push
+##### git: schneller add+commit+push (nimmt ALLES untracked mit — bewusst grob) #####
+gdrop() {
+    git add -A && git commit -m "${1:-auto commit}" && git push
 }
 
-# Add + commit + checkout master + merge + push + checkout develop
-gdep() {
-    local BRANCH=$(git rev-parse --abbrev-ref HEAD)
+##### aliases laden #####
+[ -r "${HOME}/.dotfiles/.my_aliases" ] && . "${HOME}/.dotfiles/.my_aliases"
 
-    if [ "$BRANCH" != "develop" ]; then
-        echo "Error: Not on 'develop' branch! Aborting."
-        return 1
-    fi
+##### PATH #####
+[ -d "${HOME}/bin" ]        && export PATH="${HOME}/bin:$PATH"
+[ -d "${HOME}/.local/bin" ] && export PATH="${HOME}/.local/bin:$PATH"
+[ -d "${HOME}/.cargo/bin" ] && export PATH="${HOME}/.cargo/bin:$PATH"
 
-    local MSG=${1:-"auto commit"}
+##### Tool-Hooks (alle geguarded — kosten nichts, wenn nicht installiert) #####
+[ -r "${HOME}/miniconda3/etc/profile.d/conda.sh" ] && . "${HOME}/miniconda3/etc/profile.d/conda.sh"
+[ -d /home/linuxbrew/.linuxbrew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ]          && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+command -v direnv  >/dev/null 2>&1 && eval "$(direnv hook bash)"
+command -v zoxide  >/dev/null 2>&1 && eval "$(zoxide init bash)"     # modernes cd: z <dir>
+command -v fzf     >/dev/null 2>&1 && eval "$(fzf --bash 2>/dev/null)"
 
-    echo "On 'develop' branch. Proceeding..."
-    
-    git add . && git commit -a -m "$MSG" && git push
+##### Editor #####
+if command -v nvim >/dev/null 2>&1; then export EDITOR=nvim; else export EDITOR=vim; fi
 
-    # Wechsle zu master, merge develop, pushe, dann zurück zu develop
-    git checkout master && git merge develop && git push && git checkout develop
-}
+##### History: keine Duplikate, gross, angehaengt #####
+export HISTCONTROL=ignoreboth:erasedups
+export HISTSIZE=100000
+export HISTFILESIZE=200000
+shopt -s histappend
 
-# conda
-[ -r ${HOME}/miniconda3/etc/profile.d/conda.sh ] && . ${HOME}/miniconda3/etc/profile.d/conda.sh
-
-# aliases
-[ -r ${HOME}/.dotfiles/.my_aliases ] && . ${HOME}/.dotfiles/.my_aliases
-
-# direnv
-command -v direnv &>/dev/null && eval "$(direnv hook bash)"
-show_virtual_env() {
-  if [[ -n "$VIRTUAL_ENV" && -n "$DIRENV_DIR" ]]; then
-    echo "($(basename $VIRTUAL_ENV))"
-  fi
-}
-export -f show_virtual_env
-PS1='$(show_virtual_env)'$PS1
-
-# own bins
-[ -d ${HOME}/bin ] && export PATH="${HOME}/bin:$PATH"
-[ -d ${HOME}/.local/bin ] && export PATH="${HOME}/.local/bin:$PATH"
-
-# homebrew
-[ -d /home/linuxbrew/.linuxbrew ] && eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)
-
-# colored prompt
-if [ -n "$SSH_CLIENT" ]; then
-    sshtxt="[ssh] "
-fi
-
-# Format prompt
+##### Prompt: user@host:cwd, [ssh]-Marker wenn remote #####
+[ -n "$SSH_CLIENT" ] && sshtxt="[ssh] "
 export PS1="\[\033[38;5;248m\]\u\[$(tput sgr0)\]\[\033[38;5;253m\]@\[$(tput sgr0)\]\[\033[38;5;113m\]\H\[$(tput sgr0)\]\[\033[38;5;15m\]:\[$(tput sgr0)\]\[\033[38;5;111m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n${sshtxt}\[$(tput sgr0)\]\[\033[38;5;253m\]\\$\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]"
 
-# Remove duplicates from bash history
-export HISTCONTROL=ignoreboth:erasedups
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+##### Lokale Maschinen-Overrides (nie im Repo) #####
+[ -r "${HOME}/.bashrc.local" ] && . "${HOME}/.bashrc.local"

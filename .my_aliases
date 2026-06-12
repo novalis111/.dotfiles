@@ -1,25 +1,40 @@
-# my_aliases
-## global
-alias hgr="history | grep -i "
-alias l="ls -hG"
-alias ll="ls -lAGh"
+# ~/.dotfiles/.my_aliases — modern, GNU/Linux, bevorzugt aktuelles Tooling mit Fallback.
+
+## ls — eza falls da, sonst GNU ls
+if command -v eza >/dev/null 2>&1; then
+    alias l="eza --group-directories-first"
+    alias ll="eza -lah --group-directories-first --git"
+    alias lt="eza --tree --level=2"
+else
+    alias l="ls --color=auto -h"
+    alias ll="ls --color=auto -lAh"
+fi
 alias c="clear"
+
+## cat / grep / find — moderne Tools falls installiert
+command -v bat      >/dev/null 2>&1 && alias cat="bat --paging=never"
+command -v rg       >/dev/null 2>&1 && alias grep="rg"
+command -v fd       >/dev/null 2>&1 && alias find="fd"
+
 ## git
-alias glog="git log --pretty=tformat:'%h %Cblue%cr%Creset %cn %Cgreen%s%Creset'"
 alias gst="git status"
-## php debug inside local docker
-alias xphp="php -dxdebug.idekey=phpstorm -dxdebug.remote_host=docker.host.internal"
-## python
-alias pip-upgrade-venv="pip install --upgrade pip && pip freeze | cut -d'=' -f1 | xargs -n1 pip install -U"
-## misc
-alias updot="cd ~/.dotfiles && git pull && bash install.sh --force && cd -" # update dotfiles
-alias instess="sudo apt install -y tmux git vim rsync bc" # install essentials
-alias cd..="cd .."
+alias glog="git log --pretty=tformat:'%h %Cblue%cr%Creset %cn %Cgreen%s%Creset'"
+alias gd="git diff"
+
+## navigation
 alias ..="cd .."
-alias ...="cd ../../"
-alias .3="cd ../../../"
-alias .4="cd ../../../../"
-alias mount='mount |column -t' # show readable mounts
-alias ports='netstat -tulanp' # show open ports
-alias updeb='sudo apt-get update && sudo apt-get upgrade && sudo apt-get autoremove && sudo apt-get autoclean' # update debian system
-alias su='sudo -i'
+alias ...="cd ../.."
+alias .3="cd ../../.."
+alias .4="cd ../../../.."
+
+## system
+alias ports="ss -tulpn"                       # offene Ports (netstat ist deprecated)
+alias lsmount="findmnt"                        # lesbare Mounts (mount-Alias bricht echtes Mounten!)
+alias hgr="history | grep -i"
+alias updeb="sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y && sudo apt-get autoclean"
+
+## dotfiles aktualisieren (git pull -> Symlinks sind sofort live; install.sh nur fuer neue Dateien)
+alias updot="git -C ~/.dotfiles pull && bash ~/.dotfiles/install.sh"
+
+## essentials installieren (modernes Tooling)
+alias instess="sudo apt install -y tmux git neovim rsync htop bash-completion ripgrep fd-find bat eza zoxide fzf direnv"
