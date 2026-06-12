@@ -27,6 +27,10 @@ alias ...="cd ../.."
 alias .3="cd ../../.."
 alias .4="cd ../../../.."
 
+## battlecat (Dev-Host) — mosh gegen WLAN-Latenz, predictive echo
+alias bc="mosh ingo@battlecat"                 # schnell rauf auf den Dev-Host
+alias bcssh="ssh battlecat"                     # Fallback ohne mosh (UDP blockiert)
+
 ## system
 alias ports="ss -tulpn"                       # offene Ports (netstat ist deprecated)
 alias lsmount="findmnt"                        # lesbare Mounts (mount-Alias bricht echtes Mounten!)
