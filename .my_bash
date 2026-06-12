@@ -46,9 +46,13 @@ export HISTSIZE=100000
 export HISTFILESIZE=200000
 shopt -s histappend
 
-##### Prompt: user@host:cwd, [ssh]-Marker wenn remote #####
-[ -n "$SSH_CLIENT" ] && sshtxt="[ssh] "
-export PS1="\[\033[38;5;248m\]\u\[$(tput sgr0)\]\[\033[38;5;253m\]@\[$(tput sgr0)\]\[\033[38;5;113m\]\H\[$(tput sgr0)\]\[\033[38;5;15m\]:\[$(tput sgr0)\]\[\033[38;5;111m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\]\n${sshtxt}\[$(tput sgr0)\]\[\033[38;5;253m\]\\$\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]"
+##### Prompt: user@host:cwd, [ssh]-Marker wenn remote (nur in interaktiven Shells) #####
+if [[ $- == *i* ]]; then
+    [ -n "$SSH_CLIENT" ] && sshtxt="[ssh] "
+    _r="\[$(tput sgr0 2>/dev/null)\]"   # reset einmal cachen
+    export PS1="\[\033[38;5;248m\]\u${_r}\[\033[38;5;253m\]@${_r}\[\033[38;5;113m\]\H${_r}\[\033[38;5;15m\]:${_r}\[\033[38;5;111m\]\w${_r}\[\033[38;5;15m\]\n${sshtxt}${_r}\[\033[38;5;253m\]\\$${_r}\[\033[38;5;15m\] ${_r}"
+    unset _r
+fi
 
 ##### Lokale Maschinen-Overrides (nie im Repo) #####
 [ -r "${HOME}/.bashrc.local" ] && . "${HOME}/.bashrc.local"
