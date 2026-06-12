@@ -28,8 +28,10 @@ alias .3="cd ../../.."
 alias .4="cd ../../../.."
 
 ## battlecat (Dev-Host) — mosh gegen WLAN-Latenz, predictive echo
-alias bc="mosh ingo@battlecat"                 # schnell rauf auf den Dev-Host
-alias bcssh="ssh battlecat"                     # Fallback ohne mosh (UDP blockiert)
+# Port-Range 60000:60250 = FritzBox-Freigabe-Limit (max 256 UDP-Ports/Freigabe).
+# Muss mit ufw auf battlecat + FritzBox-Portfreigabe uebereinstimmen.
+alias bc="mosh --port=60000:60250 ingo@battlecat"   # schnell rauf auf den Dev-Host
+alias bcssh="ssh battlecat"                          # Fallback ohne mosh (UDP blockiert)
 
 ## system
 alias ports="ss -tulpn"                       # offene Ports (netstat ist deprecated)
