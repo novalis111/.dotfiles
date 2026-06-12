@@ -64,9 +64,7 @@ shopt -s histappend
 ##### Prompt: user@host:cwd, [ssh]-Marker wenn remote (nur in interaktiven Shells) #####
 if [[ $- == *i* ]]; then
     [ -n "$SSH_CLIENT" ] && sshtxt="[ssh] "
-    _r="\[$(tput sgr0 2>/dev/null)\]"   # reset einmal cachen
-    export PS1="\[\033[38;5;248m\]\u${_r}\[\033[38;5;253m\]@${_r}\[\033[38;5;113m\]\H${_r}\[\033[38;5;15m\]:${_r}\[\033[38;5;111m\]\w${_r}\[\033[38;5;15m\]\n${sshtxt}${_r}\[\033[38;5;253m\]\\$${_r}\[\033[38;5;15m\] ${_r}"
-    unset _r
+    export PS1="\[\033[38;5;248m\]\u\[\033[0m\]\[\033[38;5;253m\]@\[\033[0m\]\[\033[38;5;113m\]\H\[\033[0m\]\[\033[38;5;15m\]:\[\033[0m\]\[\033[38;5;111m\]\w\[\033[0m\]\[\033[38;5;15m\]\n${sshtxt}\[\033[0m\]\[\033[38;5;253m\]\\$\[\033[0m\]\[\033[38;5;15m\] \[\033[0m\]"
 fi
 
 ##### Lokale Maschinen-Overrides (nie im Repo) #####
