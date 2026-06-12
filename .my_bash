@@ -19,6 +19,21 @@ gdrop() {
     git add -A && git commit -m "${1:-auto commit}" && git push
 }
 
+##### cx: Claude Code in persistenter tmux-Session im AKTUELLEN Verzeichnis (flickerfrei) #####
+# cd ins Repo, dann:  cx          -> Session nach Verzeichnis benannt
+#                     cx <name>   -> benannte Session (mehrere Agenten im selben Repo)
+# Detach: Ctrl+a d  |  zurueck: cx (gleicher Name)  |  Liste: cxls
+cx() {
+    command -v claude >/dev/null 2>&1 || { echo "claude (Claude Code) nicht installiert"; return 1; }
+    local name="${1:-$(basename "$PWD")}"
+    if tmux has-session -t "$name" 2>/dev/null; then
+        tmux attach -t "$name"
+    else
+        tmux new-session -s "$name" -c "$PWD" "claude; exec bash"
+    fi
+}
+alias cxls="tmux ls"
+
 ##### aliases laden #####
 [ -r "${HOME}/.dotfiles/.my_aliases" ] && . "${HOME}/.dotfiles/.my_aliases"
 
