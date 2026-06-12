@@ -34,6 +34,29 @@ cx() {
 }
 alias cxls="tmux ls"
 
+##### battlecat: ein Wort -> rein in die Werkbank #####
+# Lokal AUF battlecat:  attach an tmux-Session 'orko' (oder neu, leer, in ~/orko).
+# Von WSL2/woanders:    ssh -t battlecat und dort dieselbe Funktion -> attach.
+# KEIN auto-claude (User-Wahl 2026-06-12): drin bist du, Claude startest du mit 'cx'.
+# Die tmux-attach-or-new-Logik als EIN inline-Befehl — funktioniert remote
+# unabhaengig davon, ob das Remote-.bashrc in nicht-interaktiven Shells abbricht
+# (klassische "If not running interactively, don't do anything"-Falle).
+__battlecat_attach='sess=orko; root="$HOME/orko"; \
+command -v tmux >/dev/null 2>&1 || { echo "tmux fehlt"; exit 1; }; \
+if tmux has-session -t "$sess" 2>/dev/null; then tmux attach -t "$sess"; \
+else tmux new-session -s "$sess" -c "$root"; fi'
+
+battlecat() {
+    # Remote? (nicht auf dem Host battlecat selbst) -> ueber SSH reichen.
+    if [[ "$(hostname)" != "battlecat" ]]; then
+        command -v ssh >/dev/null 2>&1 || { echo "ssh fehlt"; return 1; }
+        # -t = TTY erzwingen (tmux braucht es); Logik inline, nicht via Remote-Funktion.
+        exec ssh -t battlecat "$__battlecat_attach"
+    fi
+    # Lokal auf battlecat: dieselbe Logik direkt.
+    eval "$__battlecat_attach"
+}
+
 ##### aliases laden #####
 [ -r "${HOME}/.dotfiles/.my_aliases" ] && . "${HOME}/.dotfiles/.my_aliases"
 
