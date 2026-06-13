@@ -17,9 +17,29 @@ Hook an `~/.bashrc`, der `.my_bash` (+ `.my_aliases`) sourct.
 | Datei | Zweck |
 |---|---|
 | `.tmux.conf` | Prefix `C-a`, Pane-Switch `Shift+Pfeil` (+ `prefix h/j/k/l`), Anti-Flicker (sync/escape-time 0/tmux-256color), OSC52-Clipboard |
-| `.my_bash` | `tm`/`tmk`/`gdrop`, PATH, Tool-Hooks (nvm/conda/brew/direnv/zoxide/fzf), Prompt mit `[ssh]`-Marker |
+| `.my_bash` | `tm`/`battlecat` (kanonische `orko`-Session, Highlander — siehe unten), `tmk`/`gdrop`, PATH, Tool-Hooks (nvm/conda/brew/direnv/zoxide/fzf), Prompt mit `[ssh]`-Marker |
 | `.my_aliases` | moderne CLI (eza/bat/rg/fd falls da, sonst Coreutils), git, navigation |
 | `install.sh` | idempotenter Symlink-Installer |
+
+## Die kanonische Orko-Session: `tm` / `battlecat`
+
+Ein Wort -> rein in die Werkbank. Beide Befehle teilen **denselben** Helper und
+zielen **immer** auf die EINE tmux-Session namens `orko`:
+
+- existiert `orko` -> attach. Sonst -> neu, leer, in `~/orko`.
+- **Highlander:** niemals eine zweite Session spawnen (kein `tm <name>`, kein
+  Verzeichnis-benanntes `cx` mehr — beides war die Quelle von Session-Wildwuchs).
+- Claude startest du **selbst** im Window (`claude` tippen) — kein Auto-Start.
+
+| Befehl | Wo | Wirkung |
+|---|---|---|
+| `tm` | lokal auf battlecat | attach an `orko` (sonst neu) |
+| `battlecat` | lokal auf battlecat | identisch zu `tm` |
+| `battlecat` | von WSL2/Laptop | `ssh -t battlecat`, dort dieselbe Highlander-Logik |
+| `tmls` | überall | `tmux ls` |
+
+Mehrere Claude-Instanzen parallel? Innerhalb von `orko` neues Window mit `Ctrl+a c`,
+dort `claude`. Wechseln mit `Ctrl+a n` / `Ctrl+a <nummer>`. Eine Session, N Windows.
 
 ## Updaten
 

@@ -1,12 +1,23 @@
 # ~/.dotfiles/.my_bash — bash-Funktionen, Prompt, PATH, Tool-Hooks
 # Wird von ~/.bashrc gesourct (eine geguardete Zeile, via install.sh).
 
-##### tmux: attach-or-new #####
+##### tm: DIE kanonische Orko-Session — Highlander, Name IMMER 'orko' #####
+# Ein Wort -> rein in die Werkbank. Session existiert -> attach. Sonst -> neu,
+# leer, in ~/orko. NIEMALS eine zweite Session spawnen (User-Direktive 2026-06-13).
+# Claude startest du SELBST im Window (einfach 'claude' tippen).
+# Detach: Ctrl+a d  |  zurueck: tm  |  Liste: tmls
+# Die Logik als EIN inline-Befehl, damit sie remote (ueber ssh) identisch laeuft —
+# unabhaengig davon, ob das Remote-.bashrc in nicht-interaktiven Shells abbricht
+# (klassische "If not running interactively, don't do anything"-Falle).
+__orko_attach='sess=orko; root="$HOME/orko"; \
+command -v tmux >/dev/null 2>&1 || { echo "tmux fehlt"; exit 1; }; \
+if tmux has-session -t "$sess" 2>/dev/null; then exec tmux attach -t "$sess"; \
+else exec tmux new-session -s "$sess" -c "$root"; fi'
+
 tm() {
-    local sess="${1:-mytmux}"
-    command -v tmux >/dev/null 2>&1 || return
-    tmux attach -t "$sess" 2>/dev/null || tmux new -s "$sess"
+    eval "$__orko_attach"
 }
+alias tmls="tmux ls"
 
 # tmux-Server killen — mit Nachfrage (24/7-Sessions sind eine Fusswaffe)
 tmk() {
@@ -19,42 +30,19 @@ gdrop() {
     git add -A && git commit -m "${1:-auto commit}" && git push
 }
 
-##### cx: Claude Code in persistenter tmux-Session im AKTUELLEN Verzeichnis (flickerfrei) #####
-# cd ins Repo, dann:  cx          -> Session nach Verzeichnis benannt
-#                     cx <name>   -> benannte Session (mehrere Agenten im selben Repo)
-# Detach: Ctrl+a d  |  zurueck: cx (gleicher Name)  |  Liste: cxls
-cx() {
-    command -v claude >/dev/null 2>&1 || { echo "claude (Claude Code) nicht installiert"; return 1; }
-    local name="${1:-$(basename "$PWD")}"
-    if tmux has-session -t "$name" 2>/dev/null; then
-        tmux attach -t "$name"
-    else
-        tmux new-session -s "$name" -c "$PWD" "claude; exec bash"
-    fi
-}
-alias cxls="tmux ls"
-
 ##### battlecat: ein Wort -> rein in die Werkbank #####
-# Lokal AUF battlecat:  attach an tmux-Session 'orko' (oder neu, leer, in ~/orko).
-# Von WSL2/woanders:    ssh -t battlecat und dort dieselbe Funktion -> attach.
-# KEIN auto-claude (User-Wahl 2026-06-12): drin bist du, Claude startest du mit 'cx'.
-# Die tmux-attach-or-new-Logik als EIN inline-Befehl — funktioniert remote
-# unabhaengig davon, ob das Remote-.bashrc in nicht-interaktiven Shells abbricht
-# (klassische "If not running interactively, don't do anything"-Falle).
-__battlecat_attach='sess=orko; root="$HOME/orko"; \
-command -v tmux >/dev/null 2>&1 || { echo "tmux fehlt"; exit 1; }; \
-if tmux has-session -t "$sess" 2>/dev/null; then tmux attach -t "$sess"; \
-else tmux new-session -s "$sess" -c "$root"; fi'
-
+# Lokal AUF battlecat:  identisch zu 'tm' (attach an 'orko', sonst neu).
+# Von WSL2/woanders:    ssh -t battlecat, dort dieselbe Highlander-Logik -> attach.
+# Beide nutzen denselben Helper __orko_attach -> koennen nie auseinanderlaufen.
 battlecat() {
     # Remote? (nicht auf dem Host battlecat selbst) -> ueber SSH reichen.
     if [[ "$(hostname)" != "battlecat" ]]; then
         command -v ssh >/dev/null 2>&1 || { echo "ssh fehlt"; return 1; }
         # -t = TTY erzwingen (tmux braucht es); Logik inline, nicht via Remote-Funktion.
-        exec ssh -t battlecat "$__battlecat_attach"
+        exec ssh -t battlecat "$__orko_attach"
     fi
     # Lokal auf battlecat: dieselbe Logik direkt.
-    eval "$__battlecat_attach"
+    eval "$__orko_attach"
 }
 
 ##### aliases laden #####
