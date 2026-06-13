@@ -1,9 +1,18 @@
 # ════════════════════════════════════════════════════════════════════
 #  battlecat — Dev-Host (i7 / RTX3060 12GB / 32GB RAM)
 #  Auto-Pfad: zuhause -> LAN (fritz.box), unterwegs -> MyFRITZ! (Italien-tauglich).
-#  Du tippst IMMER nur 'ssh battlecat' (oder Alias 'bc' = mosh).
+#  Du tippst IMMER nur 'ssh battlecat' (oder die mosh-Funktion 'battlecat').
 #  Wird von install.sh idempotent in ~/.ssh/config eingeklinkt.
-#  Voraussetzung: privater Key ~/.ssh/iterp (NICHT im Repo — separat ablegen).
+#
+#  SECRETS NICHT IM REPO (oeffentliches GitHub):
+#   - privater Key ~/.ssh/iterp           -> separat ablegen
+#   - MyFRITZ-Adresse ~/.ssh/battlecat-ext.conf -> lokal, gitignored.
+#     Inhalt (eine Zeile je Match-Block, echte Adresse aus ~/.config/battlecat.env):
+#       Match host battlecat
+#         HostName <DEINE>.myfritz.net
+#       Match host battlecat-unlock
+#         HostName <DEINE>.myfritz.net
+#     install.sh legt eine Vorlage an, falls die Datei fehlt.
 # ════════════════════════════════════════════════════════════════════
 Host battlecat
   User ingo
@@ -16,10 +25,9 @@ Host battlecat
   ControlMaster auto
   ControlPath ~/.ssh/cm-%r@%h:%p
   ControlPersist 600
+# Zuhause: LAN-DNS der FritzBox bevorzugen (schnell, kein MyFRITZ-Umweg)
 Match host battlecat exec "getent hosts battlecat.fritz.box >/dev/null 2>&1 || host -W1 battlecat.fritz.box >/dev/null 2>&1"
   HostName battlecat.fritz.box
-Match host battlecat
-  HostName REDACTED.myfritz.net
 
 # LUKS-Remote-Unlock (initramfs-dropbear, Port 2222, eigener Host-Key)
 Host battlecat-unlock
@@ -31,5 +39,7 @@ Host battlecat-unlock
   RequestTTY yes
 Match host battlecat-unlock exec "getent hosts battlecat.fritz.box >/dev/null 2>&1 || host -W1 battlecat.fritz.box >/dev/null 2>&1"
   HostName battlecat.fritz.box
-Match host battlecat-unlock
-  HostName REDACTED.myfritz.net
+
+# MyFRITZ-Fallback (unterwegs) — echte Adresse aus lokaler, gitignored Datei.
+# Muss NACH den fritz.box-Match-Blöcken stehen (SSH nimmt das erste Match).
+Include battlecat-ext.conf

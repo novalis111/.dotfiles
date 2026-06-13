@@ -32,17 +32,30 @@ gdrop() {
 
 ##### battlecat: ein Wort -> rein in die Werkbank #####
 # Lokal AUF battlecat:  identisch zu 'tm' (attach an 'orko', sonst neu).
-# Von WSL2/woanders:    ssh -t battlecat, dort dieselbe Highlander-Logik -> attach.
-# Beide nutzen denselben Helper __orko_attach -> koennen nie auseinanderlaufen.
+# Von WSL2/woanders:    mosh (ueberlebt WLAN-Wechsel/Schlaf) -> LAN wenn erreichbar,
+#                       sonst MyFRITZ. Landet direkt in tmux 'orko'.
+# Secrets (MyFRITZ-Adresse, LAN-IP, Port) kommen aus ~/.config/battlecat.env
+#   (LOKAL, NICHT im oeffentlichen dotfiles-Repo). Ohne env -> klarer Hinweis.
 battlecat() {
-    # Remote? (nicht auf dem Host battlecat selbst) -> ueber SSH reichen.
-    if [[ "$(hostname)" != "battlecat" ]]; then
-        command -v ssh >/dev/null 2>&1 || { echo "ssh fehlt"; return 1; }
-        # -t = TTY erzwingen (tmux braucht es); Logik inline, nicht via Remote-Funktion.
-        exec ssh -t battlecat "$__orko_attach"
+    # Lokal auf battlecat selbst: direkt in tmux, kein Netz.
+    if [[ "$(hostname)" == "battlecat" ]]; then
+        eval "$__orko_attach"; return
     fi
-    # Lokal auf battlecat: dieselbe Logik direkt.
-    eval "$__orko_attach"
+    # Remote: Secrets laden
+    local envf="$HOME/.config/battlecat.env"
+    [[ -r "$envf" ]] || { echo "🐱 ~/.config/battlecat.env fehlt — leg sie an (BATTLECAT_EXT/LAN/PORT/USER)"; return 1; }
+    # shellcheck disable=SC1090
+    . "$envf"
+    command -v mosh >/dev/null 2>&1 || { echo "mosh fehlt: sudo apt install mosh"; return 1; }
+    # LAN in 1s testen, sonst MyFRITZ
+    local host
+    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$BATTLECAT_PORT" 2>/dev/null; then
+        host="$BATTLECAT_LAN"; echo "🐱 battlecat via LAN ($host)"
+    else
+        host="$BATTLECAT_EXT"; echo "🐱 battlecat via MyFRITZ ($host)"
+    fi
+    # mosh: SSH nur fuer Handshake (Port + Key), dann UDP. Direkt in tmux 'orko'.
+    exec mosh --ssh="ssh -p $BATTLECAT_PORT -i $HOME/.ssh/iterp" "$BATTLECAT_USER@$host" -- bash -lc "$__orko_attach"
 }
 
 ##### aliases laden #####

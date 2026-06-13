@@ -1,0 +1,5 @@
+# Lokale Secrets — NIE committen
+*.env
+battlecat.env
+.ssh/iterp*
+battlecat-ext.conf
