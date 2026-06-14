@@ -58,6 +58,32 @@ battlecat() {
     exec mosh --ssh="ssh -p $BATTLECAT_PORT -i $HOME/.ssh/iterp" "$BATTLECAT_USER@$host" -- bash -lc "$__orko_attach"
 }
 
+# bctunnel — battlecat-Web-Ports auf den lokalen WSL2-Client forwarden.
+# Danach im Windows-Browser: http://localhost:<port>. Strg+C beendet den Tunnel.
+# Gleiche Adress-Aufloesung wie battlecat() (LAN-Test → MyFRITZ-Fallback).
+# Ports (Default-Set, ueberschreibbar via BCTUNNEL_PORTS="3100 8100 ..."):
+#   3100 lc-Frontend · 8100 lc-API · 5173 Vite · 8233 Temporal-UI · 9101 MinIO-Console
+#   8026 Mailpit · 9222 Chrome-DevTools (zum Mitschauen, was Orko sieht)
+bctunnel() {
+    local envf="$HOME/.config/battlecat.env"
+    [[ -r "$envf" ]] || { echo "🐱 ~/.config/battlecat.env fehlt (BATTLECAT_EXT/LAN/PORT/USER)"; return 1; }
+    # shellcheck disable=SC1090
+    . "$envf"
+    local host
+    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$BATTLECAT_PORT" 2>/dev/null; then
+        host="$BATTLECAT_LAN"; echo "🐱 bctunnel via LAN ($host)"
+    else
+        host="$BATTLECAT_EXT"; echo "🐱 bctunnel via MyFRITZ ($host)"
+    fi
+    local ports="${BCTUNNEL_PORTS:-3100 8100 5173 8233 9101 8026 9222}"
+    local fwd=() p
+    for p in $ports; do fwd+=(-L "127.0.0.1:$p:127.0.0.1:$p"); done
+    echo "🐱 Forward: $ports"
+    echo "   → Browser: $(for p in $ports; do printf 'http://localhost:%s  ' "$p"; done)"
+    echo "   (Strg+C beendet den Tunnel)"
+    exec ssh -N -p "$BATTLECAT_PORT" -i "$HOME/.ssh/iterp" "${fwd[@]}" "$BATTLECAT_USER@$host"
+}
+
 ##### aliases laden #####
 [ -r "${HOME}/.dotfiles/.my_aliases" ] && . "${HOME}/.dotfiles/.my_aliases"
 
