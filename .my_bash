@@ -19,6 +19,22 @@ tm() {
 }
 alias tmls="tmux ls"
 
+# omi: "Orko Mini" im AKTUELLEN Verzeichnis — kleiner Worker-Orko fuer Projekt-
+# arbeit, KEIN Orchestrierer. Startet Claude direkt hier (kein neues Window) mit
+# einem Initialprompt, der das Loop-Spawnen verbietet. (User-Direktive 2026-06-15)
+#   omi              -> Orko Mini im $PWD
+#   omi "tu X"       -> mit erstem Auftrag
+omi() {
+    command -v claude >/dev/null 2>&1 || { echo "claude-CLI fehlt"; return 1; }
+    # System-Prompt-Append = Regel haelt die GANZE Session (nicht nur 1. Nachricht).
+    local sys="Du bist 'Orko Mini' — ein kleiner Worker-Orko fuer Projektarbeit im aktuellen Verzeichnis. NIX SPAWNEN: wenn du Orko bist, KEINE tmux-Loops (orko_spawn_*/orko_loops/orko_loop_doctor), keine Deploys, kein Orchestrieren/Babysitten anderer Sessions — nur die Arbeit hier."
+    if [[ -n "$1" ]]; then
+        claude --model opus --append-system-prompt "$sys" "$*"
+    else
+        claude --model opus --append-system-prompt "$sys"
+    fi
+}
+
 # tmux-Server killen — mit Nachfrage (24/7-Sessions sind eine Fusswaffe)
 tmk() {
     read -rp "Wirklich ALLE tmux-Sessions killen? (y/N) " a
