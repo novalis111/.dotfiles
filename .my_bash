@@ -96,46 +96,71 @@ bctunnel() {
         host="$BATTLECAT_EXT"; port="$BATTLECAT_PORT"; echo "🐱 bctunnel via MyFRITZ ($host:$port)"
     fi
     local ports="${BCTUNNEL_PORTS:-3100 8100 5173 8233 9101 8026 9222}"
+    # Bind-Adresse: Default 127.0.0.1. In WSL2 mit NAT/ohne localhostForwarding kommt der
+    # Windows-Browser an 127.0.0.1 (WSL-intern) NICHT ran -> dann BCTUNNEL_BIND=0.0.0.0 setzen
+    # und im Windows-Browser die WSL-IP statt localhost ansteuern (wird unten angezeigt).
+    local bind="${BCTUNNEL_BIND:-127.0.0.1}"
     local fwd=() p
-    for p in $ports; do fwd+=(-L "127.0.0.1:$p:127.0.0.1:$p"); done
-    echo "🐱 Forward: $ports"
-    echo "   → Browser: $(for p in $ports; do printf 'http://localhost:%s  ' "$p"; done)"
+    for p in $ports; do fwd+=(-L "$bind:$p:127.0.0.1:$p"); done
+    echo "🐱 Forward ($bind): $ports"
+    if [[ "$bind" == "0.0.0.0" ]]; then
+        local wslip; wslip=$(ip -4 addr show eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1)
+        echo "   → Windows-Browser: $(for p in $ports; do printf 'http://%s:%s  ' "${wslip:-<WSL-IP>}" "$p"; done)"
+    else
+        echo "   → Browser: $(for p in $ports; do printf 'http://localhost:%s  ' "$p"; done)"
+    fi
     echo "   (Strg+C beendet den Tunnel)"
     exec ssh -N -p "$port" -i "$HOME/.ssh/iterp" "${fwd[@]}" "$BATTLECAT_USER@$host"
 }
 
-# bcweb — bctunnel im Hintergrund + Leitivo-Login direkt im (Windows-)Browser.
-# Ein Wort: Tunnel auf, warten bis :3100 antwortet, Browser auf http://localhost:3100/login.
-# Kein Browser-Install noetig — oeffnet den Windows-Default-Browser (WSL2-localhost-Bridge).
-# Tunnel laeuft als Hintergrund-Job; Ende mit:  bcweb stop   (oder  kill %bctunnel-PID).
-# Pfad/Ports ueberschreibbar:  BCWEB_PATH=/dashboard  BCTUNNEL_PORTS="3100 8100" bcweb
+# bcweb — bctunnel im Hintergrund + Leitivo-URL fuer den Windows-Browser ausgeben.
+# Bindet per Default auf 0.0.0.0, weil Windows-Browser den WSL-internen 127.0.0.1 bei NAT/ohne
+# localhostForwarding NICHT erreicht (ERR_CONNECTION_RESET). Ueber die WSL-IP klappt es immer.
+# Tunnel laeuft als Hintergrund-Job; Ende mit:  bcweb stop.
+# Override:  BCWEB_PATH=/dashboard  BCTUNNEL_PORTS="3100 8100"  BCTUNNEL_BIND=127.0.0.1  bcweb
 bcweb() {
     if [[ "$1" == "stop" ]]; then
-        pkill -f 'ssh -N .* -L 127.0.0.1:3100' && echo "🐱 bcweb-Tunnel beendet." || echo "🐱 kein bcweb-Tunnel aktiv."
+        pkill -f 'ssh -N .*:3100:127.0.0.1:3100' && echo "🐱 bcweb-Tunnel beendet." || echo "🐱 kein bcweb-Tunnel aktiv."
         return
     fi
+    local envf="$HOME/.config/battlecat.env"
+    [[ -r "$envf" ]] || { echo "🐱 ~/.config/battlecat.env fehlt"; return 1; }
+    # shellcheck disable=SC1090
+    . "$envf"
     local path="${BCWEB_PATH:-/login}"
-    # Tunnel im Hintergrund (bctunnel macht exec ssh -N -> sauber killbar via pkill oben).
-    BCTUNNEL_PORTS="${BCTUNNEL_PORTS:-3100 8100}" bctunnel &
-    echo "🐱 Warte auf Tunnel-Port 3100 (max 20s)…"
-    local i
-    for i in $(seq 1 20); do
-        curl -s -o /dev/null --max-time 1 "http://localhost:3100/" && break
+    local bind="${BCTUNNEL_BIND:-0.0.0.0}"
+    local ports="${BCTUNNEL_PORTS:-3100 8100}"
+    local wslip; wslip=$(ip -4 addr show eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1)
+    local hosturl; [[ "$bind" == "0.0.0.0" ]] && hosturl="$wslip" || hosturl="localhost"
+    # Host/Port: LAN (Port 22) testen, sonst MyFRITZ.
+    local lanport="${BATTLECAT_LAN_PORT:-22}" host port
+    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$lanport" 2>/dev/null; then
+        host="$BATTLECAT_LAN"; port="$lanport"; echo "🐱 bcweb via LAN ($host:$port), bind $bind"
+    else
+        host="$BATTLECAT_EXT"; port="$BATTLECAT_PORT"; echo "🐱 bcweb via MyFRITZ ($host:$port), bind $bind"
+    fi
+    pkill -f 'ssh -N .*:3100:127.0.0.1:3100' 2>/dev/null  # alten Tunnel ersetzen
+    local fwd=() p; for p in $ports; do fwd+=(-L "$bind:$p:127.0.0.1:$p"); done
+    local log="/tmp/bcweb.log"
+    # Eigenes ssh (NICHT via bctunnel-exec-im-Subshell -> Fehler sichtbar). ExitOnForwardFailure:
+    # scheitert der Bind, stirbt ssh sofort statt halb zu laufen.
+    nohup ssh -N -o ExitOnForwardFailure=yes -o ConnectTimeout=8 -o BatchMode=yes \
+        -p "$port" -i "$HOME/.ssh/iterp" "${fwd[@]}" "$BATTLECAT_USER@$host" >"$log" 2>&1 &
+    local sshpid=$!
+    echo "🐱 Warte auf Tunnel-Port 3100 (max 15s)…"
+    local i ok=0
+    for i in $(seq 1 15); do
+        kill -0 "$sshpid" 2>/dev/null || break   # ssh gestorben -> raus
+        curl -s -o /dev/null --max-time 1 "http://127.0.0.1:3100/" && { ok=1; break; }
         sleep 1
     done
-    # Browser-Oeffner: wslview (Windows-Default) bevorzugt, sonst Linux-Browser, sonst Hinweis.
-    local url="http://localhost:3100${path}"
-    if command -v wslview >/dev/null 2>&1; then
-        echo "🐱 Oeffne $url im Windows-Browser…"; wslview "$url"
-    elif command -v google-chrome >/dev/null 2>&1; then
-        echo "🐱 Oeffne $url (google-chrome)…"; google-chrome --new-window "$url" >/dev/null 2>&1 &
-    elif command -v chromium >/dev/null 2>&1; then
-        echo "🐱 Oeffne $url (chromium)…"; chromium --new-window "$url" >/dev/null 2>&1 &
-    else
-        echo "🐱 Tunnel steht. Kein Browser-Opener gefunden — manuell oeffnen: $url"
-        echo "   (wslview fehlt? -> sudo apt install wslu)"
+    if [[ "$ok" != 1 ]]; then
+        echo "🐱 ❌ Tunnel kam nicht hoch. ssh-Ausgabe:"; sed 's/^/      /' "$log" 2>/dev/null
+        kill "$sshpid" 2>/dev/null; return 1
     fi
-    echo "🐱 Tunnel laeuft im Hintergrund. Beenden:  bcweb stop"
+    echo "🐱 ✓ Tunnel steht (bind $bind:3100). Im WINDOWS-Browser oeffnen:"
+    echo "      http://${hosturl}:3100${path}"
+    echo "🐱 Beenden:  bcweb stop"
 }
 
 ##### aliases laden #####
