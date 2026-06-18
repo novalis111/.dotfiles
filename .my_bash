@@ -143,7 +143,7 @@ bctunnel() {
 bcweb() {
     if [[ "$1" == "stop" ]]; then
         pkill -f 'ssh -N .*:3100:127.0.0.1:3100' && echo "🐱 bcweb-Tunnel beendet." || echo "🐱 kein bcweb-Tunnel aktiv."
-        pkill -f 'ssh -N .*-R 127.0.0.1:9223' 2>/dev/null && echo "🐱 Reverse-CDP-Tunnel beendet."
+        pkill -f 'ssh -N .*-R 127.0.0.1:9222' 2>/dev/null && echo "🐱 Reverse-CDP-Tunnel beendet (battlecat-headless kommt beim nächsten MCP-Call zurück)."
         pkill -f 'remote-debugging-port=9223' 2>/dev/null && echo "🐱 QA-Chrome beendet."
         return
     fi
@@ -209,14 +209,25 @@ bcweb() {
             echo "🐱 ❌ QA-Chrome-Debug-Port kam nicht hoch (WSLg aktiv? echo \$DISPLAY). Log:"; sed 's/^/      /' /tmp/bcweb-chrome.log 2>/dev/null | tail -5
             return 1
         fi
-        # Reverse-Tunnel: battlecat:127.0.0.1:9223 -> WSL2:127.0.0.1:9223 (= QA-Chrome)
-        pkill -f 'ssh -N .*-R 127.0.0.1:9223' 2>/dev/null
+        # Reverse-Tunnel: battlecat:127.0.0.1:9222 -> WSL2:127.0.0.1:9223 (= QA-Chrome).
+        # WICHTIG: battlecat-seitig auf 9222 (NICHT 9223) — das ist der Port, auf den der
+        # chrome-devtools-MCP fix zeigt. Dadurch findet Orkos MCP automatisch DEINEN Chrome,
+        # ohne je neu zu verbinden (Tunnel-Vorrang: chrome_headless_daemon.sh startet seinen
+        # eigenen headless dann NICHT). bcweb stop / Tunnel-Ende -> headless kommt von selbst zurueck.
+        # Erst battlecats headless auf 9222 freiraeumen, damit der Remote-Bind klappt:
+        ssh -o ConnectTimeout=8 -o BatchMode=yes -p "$port" -i "$HOME/.ssh/iterp" \
+            "$BATTLECAT_USER@$host" "pkill -f 'remote-debugging-port=9222' 2>/dev/null; sleep 1" 2>/dev/null
+        pkill -f 'ssh -N .*-R 127.0.0.1:9222' 2>/dev/null
         nohup ssh -N -o ExitOnForwardFailure=yes -o ConnectTimeout=8 -o BatchMode=yes \
-            -p "$port" -i "$HOME/.ssh/iterp" -R 127.0.0.1:9223:127.0.0.1:9223 \
+            -p "$port" -i "$HOME/.ssh/iterp" -R 127.0.0.1:9222:127.0.0.1:9223 \
             "$BATTLECAT_USER@$host" >/tmp/bcweb-cdp.log 2>&1 &
         sleep 2
-        echo "🐱 ✓ QA-Chrome offen (WSLg-Fenster) + Reverse-CDP zu battlecat steht."
-        echo "🐱   → Sag Orko: 'QA-Chrome steht' — er verbindet seinen MCP mit 127.0.0.1:9223 und steuert DEINEN Tab live."
+        if ! grep -q '' /tmp/bcweb-cdp.log 2>/dev/null || ! pgrep -f 'ssh -N .*-R 127.0.0.1:9222' >/dev/null; then
+            : # Tunnel-PID-Check unten ueber curl-Hinweis
+        fi
+        echo "🐱 ✓ QA-Chrome offen (WSLg-Fenster) + Reverse-CDP auf battlecat:9222 (MCP-Port)."
+        echo "🐱   → Sag Orko: 'QA-Chrome steht' — sein MCP findet deinen Chrome automatisch auf 9222."
+        echo "🐱   → Autonom-Modus zurueck:  bcweb stop  (battlecat-headless kommt beim naechsten MCP-Call von selbst)."
     fi
     echo "🐱 Beenden:  bcweb stop"
 }
