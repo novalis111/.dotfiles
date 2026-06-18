@@ -63,15 +63,17 @@ battlecat() {
     # shellcheck disable=SC1090
     . "$envf"
     command -v mosh >/dev/null 2>&1 || { echo "mosh fehlt: sudo apt install mosh"; return 1; }
-    # LAN in 1s testen, sonst MyFRITZ
-    local host
-    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$BATTLECAT_PORT" 2>/dev/null; then
-        host="$BATTLECAT_LAN"; echo "🐱 battlecat via LAN ($host)"
+    # LAN-SSH laeuft auf Port 22 (Default), nur die MyFRITZ-Freigabe nach aussen ist $BATTLECAT_PORT (993).
+    # Daher: LAN-Zweig testet+nutzt BATTLECAT_LAN_PORT (Default 22), Extern-Zweig BATTLECAT_PORT.
+    local lanport="${BATTLECAT_LAN_PORT:-22}"
+    local host port
+    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$lanport" 2>/dev/null; then
+        host="$BATTLECAT_LAN"; port="$lanport"; echo "🐱 battlecat via LAN ($host:$port)"
     else
-        host="$BATTLECAT_EXT"; echo "🐱 battlecat via MyFRITZ ($host)"
+        host="$BATTLECAT_EXT"; port="$BATTLECAT_PORT"; echo "🐱 battlecat via MyFRITZ ($host:$port)"
     fi
     # mosh: SSH nur fuer Handshake (Port + Key), dann UDP. Direkt in tmux 'orko'.
-    exec mosh --ssh="ssh -p $BATTLECAT_PORT -i $HOME/.ssh/iterp" "$BATTLECAT_USER@$host" -- bash -lc "$__orko_attach"
+    exec mosh --ssh="ssh -p $port -i $HOME/.ssh/iterp" "$BATTLECAT_USER@$host" -- bash -lc "$__orko_attach"
 }
 
 # bctunnel — battlecat-Web-Ports auf den lokalen WSL2-Client forwarden.
@@ -85,11 +87,13 @@ bctunnel() {
     [[ -r "$envf" ]] || { echo "🐱 ~/.config/battlecat.env fehlt (BATTLECAT_EXT/LAN/PORT/USER)"; return 1; }
     # shellcheck disable=SC1090
     . "$envf"
-    local host
-    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$BATTLECAT_PORT" 2>/dev/null; then
-        host="$BATTLECAT_LAN"; echo "🐱 bctunnel via LAN ($host)"
+    # LAN-SSH = Port 22 (Default), MyFRITZ-Freigabe nach aussen = $BATTLECAT_PORT (993).
+    local lanport="${BATTLECAT_LAN_PORT:-22}"
+    local host port
+    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$lanport" 2>/dev/null; then
+        host="$BATTLECAT_LAN"; port="$lanport"; echo "🐱 bctunnel via LAN ($host:$port)"
     else
-        host="$BATTLECAT_EXT"; echo "🐱 bctunnel via MyFRITZ ($host)"
+        host="$BATTLECAT_EXT"; port="$BATTLECAT_PORT"; echo "🐱 bctunnel via MyFRITZ ($host:$port)"
     fi
     local ports="${BCTUNNEL_PORTS:-3100 8100 5173 8233 9101 8026 9222}"
     local fwd=() p
@@ -97,7 +101,41 @@ bctunnel() {
     echo "🐱 Forward: $ports"
     echo "   → Browser: $(for p in $ports; do printf 'http://localhost:%s  ' "$p"; done)"
     echo "   (Strg+C beendet den Tunnel)"
-    exec ssh -N -p "$BATTLECAT_PORT" -i "$HOME/.ssh/iterp" "${fwd[@]}" "$BATTLECAT_USER@$host"
+    exec ssh -N -p "$port" -i "$HOME/.ssh/iterp" "${fwd[@]}" "$BATTLECAT_USER@$host"
+}
+
+# bcweb — bctunnel im Hintergrund + Leitivo-Login direkt im (Windows-)Browser.
+# Ein Wort: Tunnel auf, warten bis :3100 antwortet, Browser auf http://localhost:3100/login.
+# Kein Browser-Install noetig — oeffnet den Windows-Default-Browser (WSL2-localhost-Bridge).
+# Tunnel laeuft als Hintergrund-Job; Ende mit:  bcweb stop   (oder  kill %bctunnel-PID).
+# Pfad/Ports ueberschreibbar:  BCWEB_PATH=/dashboard  BCTUNNEL_PORTS="3100 8100" bcweb
+bcweb() {
+    if [[ "$1" == "stop" ]]; then
+        pkill -f 'ssh -N .* -L 127.0.0.1:3100' && echo "🐱 bcweb-Tunnel beendet." || echo "🐱 kein bcweb-Tunnel aktiv."
+        return
+    fi
+    local path="${BCWEB_PATH:-/login}"
+    # Tunnel im Hintergrund (bctunnel macht exec ssh -N -> sauber killbar via pkill oben).
+    BCTUNNEL_PORTS="${BCTUNNEL_PORTS:-3100 8100}" bctunnel &
+    echo "🐱 Warte auf Tunnel-Port 3100 (max 20s)…"
+    local i
+    for i in $(seq 1 20); do
+        curl -s -o /dev/null --max-time 1 "http://localhost:3100/" && break
+        sleep 1
+    done
+    # Browser-Oeffner: wslview (Windows-Default) bevorzugt, sonst Linux-Browser, sonst Hinweis.
+    local url="http://localhost:3100${path}"
+    if command -v wslview >/dev/null 2>&1; then
+        echo "🐱 Oeffne $url im Windows-Browser…"; wslview "$url"
+    elif command -v google-chrome >/dev/null 2>&1; then
+        echo "🐱 Oeffne $url (google-chrome)…"; google-chrome --new-window "$url" >/dev/null 2>&1 &
+    elif command -v chromium >/dev/null 2>&1; then
+        echo "🐱 Oeffne $url (chromium)…"; chromium --new-window "$url" >/dev/null 2>&1 &
+    else
+        echo "🐱 Tunnel steht. Kein Browser-Opener gefunden — manuell oeffnen: $url"
+        echo "   (wslview fehlt? -> sudo apt install wslu)"
+    fi
+    echo "🐱 Tunnel laeuft im Hintergrund. Beenden:  bcweb stop"
 }
 
 ##### aliases laden #####
