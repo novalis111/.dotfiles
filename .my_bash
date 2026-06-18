@@ -28,6 +28,7 @@ if tmux has-session -t "$sess" 2>/dev/null; then \
   exec tmux attach -t "$sess"; \
 else exec tmux new-session -s "$sess" -c "$root"; fi'
 
+# tm — Attach an die Orko-tmux-Session (oder neu anlegen). Hub landet auf Window 0.
 tm() {
     eval "$__orko_attach"
 }
@@ -55,7 +56,8 @@ tmk() {
     [[ "$a" =~ ^[Yy]$ ]] && tmux kill-server
 }
 
-##### git: schneller add+commit+push (nimmt ALLES untracked mit — bewusst grob) #####
+# gdrop — git: schneller add+commit+push, nimmt ALLES untracked mit (bewusst grob).
+#   gdrop "msg"  -> commit-Message (default: "auto commit")
 gdrop() {
     git add -A && git commit -m "${1:-auto commit}" && git push
 }
@@ -217,6 +219,52 @@ bcweb() {
         echo "🐱   → Sag Orko: 'QA-Chrome steht' — er verbindet seinen MCP mit 127.0.0.1:9223 und steuert DEINEN Tab live."
     fi
     echo "🐱 Beenden:  bcweb stop"
+}
+
+# orko — die EIGENE dotfiles-Doku: alle Funktionen + Aliases mit Erklaerung, LIVE
+# aus .my_bash + .my_aliases geparst (bleibt automatisch aktuell). "ich vergesse die sonst".
+#   orko          -> volle Uebersicht
+#   orko <wort>   -> nur Tools, die <wort> im Namen/Beschreibung enthalten (Filter)
+orko() {
+    local mb="$HOME/.dotfiles/.my_bash" ma="$HOME/.dotfiles/.my_aliases" filter="${1:-}"
+    printf '\n🐱  \033[1mOrko-Werkzeugkasten\033[0m  ·  ~/.dotfiles  (Quelle: .my_bash · .my_aliases)\n'
+    [[ -n "$filter" ]] && printf '    Filter: »%s«\n' "$filter"
+
+    printf '\n\033[1m── FUNKTIONEN ───────────────────────────────────────────\033[0m\n'
+    # Erste echte '# '-Kommentarzeile des Blocks = kanonische Beschreibung; eingerueckte
+    # '#   '-Beispielzeilen als optionale Usage-Hints sammeln.
+    awk -v flt="$filter" '
+        /^# / && !/^#   / { if (cmt=="") cmt=$0; next }
+        /^#   / { use[nuse++]=$0; next }
+        /^[a-z_][a-z0-9_]*\(\) \{/ {
+            name=$1; sub(/\(\).*/,"",name);
+            d=cmt; sub(/^# */,"",d); sub(/^[a-zA-Z_]+ *[:—-]+ */,"",d);
+            if (flt=="" || index(name flt, flt) || tolower(name) ~ tolower(flt) || tolower(d) ~ tolower(flt)) {
+                printf "  \033[36m%-11s\033[0m %s\n", name, substr(d,1,58);
+                for (i=0;i<nuse;i++){ h=use[i]; sub(/^#   */,"",h); printf "  %-11s   ↳ %s\n","",h }
+            }
+            cmt=""; nuse=0; next;
+        }
+        /^[^#]/ { cmt=""; nuse=0 }
+    ' "$mb"
+
+    printf '\n\033[1m── ALIASES ──────────────────────────────────────────────\033[0m\n'
+    # alias name="cmd"   # inline-kommentar   ->   name → cmd   (kommentar)
+    awk -v flt="$filter" '
+        /^alias / {
+            line=$0; sub(/^alias /,"",line);
+            eq=index(line,"="); name=substr(line,1,eq-1); rest=substr(line,eq+1);
+            note=""; h=index(rest," #"); if(h){ note=substr(rest,h+2); rest=substr(rest,1,h-1) }
+            gsub(/^["\x27]|["\x27][[:space:]]*$/,"",rest); sub(/[[:space:]]+$/,"",rest);
+            gsub(/^[[:space:]]*#[[:space:]]*/,"",note);
+            if (flt=="" || tolower(name) ~ tolower(flt) || tolower(rest) ~ tolower(flt) || tolower(note) ~ tolower(flt)) {
+                if (note!="") printf "  \033[33m%-9s\033[0m %-32s \033[2m%s\033[0m\n", name, substr(rest,1,32), note;
+                else          printf "  \033[33m%-9s\033[0m %s\n", name, substr(rest,1,46);
+            }
+        }
+    ' "$ma"
+
+    printf '\n\033[2m  Detail:  type <name>   ·   Filter:  orko <wort>   ·   Quelle bearbeiten:  $EDITOR ~/.dotfiles/.my_bash\033[0m\n\n'
 }
 
 ##### aliases laden #####
