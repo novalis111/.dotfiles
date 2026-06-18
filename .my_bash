@@ -132,11 +132,20 @@ bctunnel() {
 # localhostForwarding NICHT erreicht (ERR_CONNECTION_RESET). Ueber die WSL-IP klappt es immer.
 # Tunnel laeuft als Hintergrund-Job; Ende mit:  bcweb stop.
 # Override:  BCWEB_PATH=/dashboard  BCTUNNEL_PORTS="3100 8100"  BCTUNNEL_BIND=127.0.0.1  bcweb
+#
+# MODUS  bcweb chrome  — geteilter QA-Browser (Modell B, Reverse-CDP):
+#   startet zusaetzlich einen WSL2-Linux-Chrome (WSLg-Fenster auf Windows) mit
+#   Debug-Port 9223 + Reverse-Tunnel, sodass der battlecat-Orko diesen sichtbaren
+#   Browser via chrome-devtools-mcp STEUERT. Du siehst jeden Klick live.
+#   Ende:  bcweb stop  (raeumt App-Tunnel + Reverse-Tunnel + QA-Chrome).
 bcweb() {
     if [[ "$1" == "stop" ]]; then
         pkill -f 'ssh -N .*:3100:127.0.0.1:3100' && echo "🐱 bcweb-Tunnel beendet." || echo "🐱 kein bcweb-Tunnel aktiv."
+        pkill -f 'ssh -N .*-R 127.0.0.1:9223' 2>/dev/null && echo "🐱 Reverse-CDP-Tunnel beendet."
+        pkill -f 'remote-debugging-port=9223' 2>/dev/null && echo "🐱 QA-Chrome beendet."
         return
     fi
+    local cdp=0; [[ "$1" == "chrome" ]] && cdp=1
     local envf="$HOME/.config/battlecat.env"
     [[ -r "$envf" ]] || { echo "🐱 ~/.config/battlecat.env fehlt"; return 1; }
     # shellcheck disable=SC1090
@@ -174,6 +183,39 @@ bcweb() {
     fi
     echo "🐱 ✓ Tunnel steht (bind $bind:3100). Im WINDOWS-Browser oeffnen:"
     echo "      http://${hosturl}:3100${path}"
+
+    if [[ "$cdp" == 1 ]]; then
+        # Modell B: WSL2-Chrome als geteilter QA-Browser starten + Reverse-CDP zu battlecat.
+        local chrome; chrome=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium 2>/dev/null)
+        if [[ -z "$chrome" ]]; then
+            echo "🐱 ⚠️  Kein Linux-Chrome in WSL2. Einmalig installieren:"
+            echo "      cd /tmp && wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && sudo apt-get install -y ./google-chrome-stable_current_amd64.deb"
+            echo "🐱 Beenden:  bcweb stop"; return 1
+        fi
+        # CDP bindet IMMER auf 127.0.0.1 (im WSL2-Namespace) — der Reverse-Tunnel reicht es zu battlecat.
+        pkill -f 'remote-debugging-port=9223' 2>/dev/null
+        nohup "$chrome" --remote-debugging-port=9223 --remote-debugging-address=127.0.0.1 \
+            --user-data-dir="$HOME/.cache/leitivo-qa-chrome" --no-first-run --no-default-browser-check \
+            --new-window "http://localhost:3100${path}" >/tmp/bcweb-chrome.log 2>&1 &
+        echo "🐱 Warte auf QA-Chrome Debug-Port 9223 (max 12s)…"
+        local j cok=0
+        for j in $(seq 1 12); do
+            curl -s -o /dev/null --max-time 1 "http://127.0.0.1:9223/json/version" && { cok=1; break; }
+            sleep 1
+        done
+        if [[ "$cok" != 1 ]]; then
+            echo "🐱 ❌ QA-Chrome-Debug-Port kam nicht hoch (WSLg aktiv? echo \$DISPLAY). Log:"; sed 's/^/      /' /tmp/bcweb-chrome.log 2>/dev/null | tail -5
+            return 1
+        fi
+        # Reverse-Tunnel: battlecat:127.0.0.1:9223 -> WSL2:127.0.0.1:9223 (= QA-Chrome)
+        pkill -f 'ssh -N .*-R 127.0.0.1:9223' 2>/dev/null
+        nohup ssh -N -o ExitOnForwardFailure=yes -o ConnectTimeout=8 -o BatchMode=yes \
+            -p "$port" -i "$HOME/.ssh/iterp" -R 127.0.0.1:9223:127.0.0.1:9223 \
+            "$BATTLECAT_USER@$host" >/tmp/bcweb-cdp.log 2>&1 &
+        sleep 2
+        echo "🐱 ✓ QA-Chrome offen (WSLg-Fenster) + Reverse-CDP zu battlecat steht."
+        echo "🐱   → Sag Orko: 'QA-Chrome steht' — er verbindet seinen MCP mit 127.0.0.1:9223 und steuert DEINEN Tab live."
+    fi
     echo "🐱 Beenden:  bcweb stop"
 }
 
