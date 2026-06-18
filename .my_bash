@@ -77,15 +77,17 @@ battlecat() {
     # shellcheck disable=SC1090
     . "$envf"
     command -v mosh >/dev/null 2>&1 || { echo "mosh fehlt: sudo apt install mosh"; return 1; }
-    # LAN in 1s testen, sonst MyFRITZ
-    local host
-    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$BATTLECAT_PORT" 2>/dev/null; then
-        host="$BATTLECAT_LAN"; echo "🐱 battlecat via LAN ($host)"
+    # LAN-SSH laeuft auf Port 22 (Default), nur die MyFRITZ-Freigabe nach aussen ist $BATTLECAT_PORT (993).
+    # Daher: LAN-Zweig testet+nutzt BATTLECAT_LAN_PORT (Default 22), Extern-Zweig BATTLECAT_PORT.
+    local lanport="${BATTLECAT_LAN_PORT:-22}"
+    local host port
+    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$lanport" 2>/dev/null; then
+        host="$BATTLECAT_LAN"; port="$lanport"; echo "🐱 battlecat via LAN ($host:$port)"
     else
-        host="$BATTLECAT_EXT"; echo "🐱 battlecat via MyFRITZ ($host)"
+        host="$BATTLECAT_EXT"; port="$BATTLECAT_PORT"; echo "🐱 battlecat via MyFRITZ ($host:$port)"
     fi
     # mosh: SSH nur fuer Handshake (Port + Key), dann UDP. Direkt in tmux 'orko'.
-    exec mosh --ssh="ssh -p $BATTLECAT_PORT -i $HOME/.ssh/iterp" "$BATTLECAT_USER@$host" -- bash -lc "$__orko_attach"
+    exec mosh --ssh="ssh -p $port -i $HOME/.ssh/iterp" "$BATTLECAT_USER@$host" -- bash -lc "$__orko_attach"
 }
 
 # bctunnel — battlecat-Web-Ports auf den lokalen WSL2-Client forwarden.
@@ -99,19 +101,80 @@ bctunnel() {
     [[ -r "$envf" ]] || { echo "🐱 ~/.config/battlecat.env fehlt (BATTLECAT_EXT/LAN/PORT/USER)"; return 1; }
     # shellcheck disable=SC1090
     . "$envf"
-    local host
-    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$BATTLECAT_PORT" 2>/dev/null; then
-        host="$BATTLECAT_LAN"; echo "🐱 bctunnel via LAN ($host)"
+    # LAN-SSH = Port 22 (Default), MyFRITZ-Freigabe nach aussen = $BATTLECAT_PORT (993).
+    local lanport="${BATTLECAT_LAN_PORT:-22}"
+    local host port
+    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$lanport" 2>/dev/null; then
+        host="$BATTLECAT_LAN"; port="$lanport"; echo "🐱 bctunnel via LAN ($host:$port)"
     else
-        host="$BATTLECAT_EXT"; echo "🐱 bctunnel via MyFRITZ ($host)"
+        host="$BATTLECAT_EXT"; port="$BATTLECAT_PORT"; echo "🐱 bctunnel via MyFRITZ ($host:$port)"
     fi
     local ports="${BCTUNNEL_PORTS:-3100 8100 5173 8233 9101 8026 9222}"
+    # Bind-Adresse: Default 127.0.0.1. In WSL2 mit NAT/ohne localhostForwarding kommt der
+    # Windows-Browser an 127.0.0.1 (WSL-intern) NICHT ran -> dann BCTUNNEL_BIND=0.0.0.0 setzen
+    # und im Windows-Browser die WSL-IP statt localhost ansteuern (wird unten angezeigt).
+    local bind="${BCTUNNEL_BIND:-127.0.0.1}"
     local fwd=() p
-    for p in $ports; do fwd+=(-L "127.0.0.1:$p:127.0.0.1:$p"); done
-    echo "🐱 Forward: $ports"
-    echo "   → Browser: $(for p in $ports; do printf 'http://localhost:%s  ' "$p"; done)"
+    for p in $ports; do fwd+=(-L "$bind:$p:127.0.0.1:$p"); done
+    echo "🐱 Forward ($bind): $ports"
+    if [[ "$bind" == "0.0.0.0" ]]; then
+        local wslip; wslip=$(ip -4 addr show eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1)
+        echo "   → Windows-Browser: $(for p in $ports; do printf 'http://%s:%s  ' "${wslip:-<WSL-IP>}" "$p"; done)"
+    else
+        echo "   → Browser: $(for p in $ports; do printf 'http://localhost:%s  ' "$p"; done)"
+    fi
     echo "   (Strg+C beendet den Tunnel)"
-    exec ssh -N -p "$BATTLECAT_PORT" -i "$HOME/.ssh/iterp" "${fwd[@]}" "$BATTLECAT_USER@$host"
+    exec ssh -N -p "$port" -i "$HOME/.ssh/iterp" "${fwd[@]}" "$BATTLECAT_USER@$host"
+}
+
+# bcweb — bctunnel im Hintergrund + Leitivo-URL fuer den Windows-Browser ausgeben.
+# Bindet per Default auf 0.0.0.0, weil Windows-Browser den WSL-internen 127.0.0.1 bei NAT/ohne
+# localhostForwarding NICHT erreicht (ERR_CONNECTION_RESET). Ueber die WSL-IP klappt es immer.
+# Tunnel laeuft als Hintergrund-Job; Ende mit:  bcweb stop.
+# Override:  BCWEB_PATH=/dashboard  BCTUNNEL_PORTS="3100 8100"  BCTUNNEL_BIND=127.0.0.1  bcweb
+bcweb() {
+    if [[ "$1" == "stop" ]]; then
+        pkill -f 'ssh -N .*:3100:127.0.0.1:3100' && echo "🐱 bcweb-Tunnel beendet." || echo "🐱 kein bcweb-Tunnel aktiv."
+        return
+    fi
+    local envf="$HOME/.config/battlecat.env"
+    [[ -r "$envf" ]] || { echo "🐱 ~/.config/battlecat.env fehlt"; return 1; }
+    # shellcheck disable=SC1090
+    . "$envf"
+    local path="${BCWEB_PATH:-/login}"
+    local bind="${BCTUNNEL_BIND:-0.0.0.0}"
+    local ports="${BCTUNNEL_PORTS:-3100 8100}"
+    local wslip; wslip=$(ip -4 addr show eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1)
+    local hosturl; [[ "$bind" == "0.0.0.0" ]] && hosturl="$wslip" || hosturl="localhost"
+    # Host/Port: LAN (Port 22) testen, sonst MyFRITZ.
+    local lanport="${BATTLECAT_LAN_PORT:-22}" host port
+    if command -v nc >/dev/null 2>&1 && nc -z -w1 "$BATTLECAT_LAN" "$lanport" 2>/dev/null; then
+        host="$BATTLECAT_LAN"; port="$lanport"; echo "🐱 bcweb via LAN ($host:$port), bind $bind"
+    else
+        host="$BATTLECAT_EXT"; port="$BATTLECAT_PORT"; echo "🐱 bcweb via MyFRITZ ($host:$port), bind $bind"
+    fi
+    pkill -f 'ssh -N .*:3100:127.0.0.1:3100' 2>/dev/null  # alten Tunnel ersetzen
+    local fwd=() p; for p in $ports; do fwd+=(-L "$bind:$p:127.0.0.1:$p"); done
+    local log="/tmp/bcweb.log"
+    # Eigenes ssh (NICHT via bctunnel-exec-im-Subshell -> Fehler sichtbar). ExitOnForwardFailure:
+    # scheitert der Bind, stirbt ssh sofort statt halb zu laufen.
+    nohup ssh -N -o ExitOnForwardFailure=yes -o ConnectTimeout=8 -o BatchMode=yes \
+        -p "$port" -i "$HOME/.ssh/iterp" "${fwd[@]}" "$BATTLECAT_USER@$host" >"$log" 2>&1 &
+    local sshpid=$!
+    echo "🐱 Warte auf Tunnel-Port 3100 (max 15s)…"
+    local i ok=0
+    for i in $(seq 1 15); do
+        kill -0 "$sshpid" 2>/dev/null || break   # ssh gestorben -> raus
+        curl -s -o /dev/null --max-time 1 "http://127.0.0.1:3100/" && { ok=1; break; }
+        sleep 1
+    done
+    if [[ "$ok" != 1 ]]; then
+        echo "🐱 ❌ Tunnel kam nicht hoch. ssh-Ausgabe:"; sed 's/^/      /' "$log" 2>/dev/null
+        kill "$sshpid" 2>/dev/null; return 1
+    fi
+    echo "🐱 ✓ Tunnel steht (bind $bind:3100). Im WINDOWS-Browser oeffnen:"
+    echo "      http://${hosturl}:3100${path}"
+    echo "🐱 Beenden:  bcweb stop"
 }
 
 ##### aliases laden #####

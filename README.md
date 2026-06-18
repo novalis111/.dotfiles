@@ -37,6 +37,8 @@ zielen **immer** auf die EINE tmux-Session namens `orko`:
 | `battlecat` | lokal auf battlecat | identisch zu `tm` |
 | `battlecat` | von WSL2/Laptop | `ssh -t battlecat`, dort dieselbe Highlander-Logik |
 | `tmls` | überall | `tmux ls` |
+| `bctunnel` | vom Laptop | battlecat-Web-Ports forwarden (Default 3100/8100/…), Strg+C beendet |
+| `bcweb` | vom Laptop | `bctunnel` im Hintergrund + Leitivo-Login im Browser; `bcweb stop` beendet |
 
 Mehrere Claude-Instanzen parallel? Innerhalb von `orko` neues Window mit `Ctrl+a c`,
 dort `claude`. Wechseln mit `Ctrl+a n` / `Ctrl+a <nummer>`. Eine Session, N Windows.
