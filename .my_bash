@@ -9,9 +9,23 @@
 # Die Logik als EIN inline-Befehl, damit sie remote (ueber ssh) identisch laeuft —
 # unabhaengig davon, ob das Remote-.bashrc in nicht-interaktiven Shells abbricht
 # (klassische "If not running interactively, don't do anything"-Falle).
+# Hub-Window-Auto-Move: der Hub (claude·orko) soll IMMER auf Window-Index 0 liegen
+# (Owner-Wunsch 2026-06-17). base-index 0 deckt NUR neu erstellte Sessions ab — eine
+# laengst laufende orko-Session muss aktiv umgezogen werden. Idempotent + defensiv:
+# nur schieben, wenn Index 0 frei ist UND das Hub-Window woanders liegt (nie einen
+# laufenden Loop ueberschreiben). renumber-windows=off (feste Loop-Indizes) wird NICHT
+# angetastet — move-window ist atomar und laesst alle anderen Fenster in Ruhe.
+__orko_hub_to_front='sess=orko; \
+tmux has-session -t "$sess" 2>/dev/null || exit 0; \
+tmux list-windows -t "$sess" -F "#{window_index}" | grep -qx 0 && exit 0; \
+hubidx=$(tmux list-windows -t "$sess" -F "#{window_index} #{window_name}" | awk "/claude.orko/{print \$1; exit}"); \
+[ -n "$hubidx" ] && tmux move-window -s "$sess:$hubidx" -t "$sess:0" 2>/dev/null; \
+exit 0'
 __orko_attach='sess=orko; root="$HOME/orko"; \
 command -v tmux >/dev/null 2>&1 || { echo "tmux fehlt"; exit 1; }; \
-if tmux has-session -t "$sess" 2>/dev/null; then exec tmux attach -t "$sess"; \
+if tmux has-session -t "$sess" 2>/dev/null; then \
+  ( eval "$__orko_hub_to_front" ); \
+  exec tmux attach -t "$sess"; \
 else exec tmux new-session -s "$sess" -c "$root"; fi'
 
 tm() {
